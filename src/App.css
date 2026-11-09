@@ -1,0 +1,1150 @@
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+  font-family: 'DM Sans', sans-serif;
+  color: #f8f7fb;
+  background: #09090e;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --purple: #9865f5;
+  --muted: #898794;
+  --panel: #111117;
+  --border: #24232d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #09090e;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 0;
+}
+
+.app {
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: 245px;
+  padding: 30px 20px;
+  background: #0c0b11;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font: 800 26px Manrope, sans-serif;
+  letter-spacing: 2px;
+  margin: 0 0 48px 5px;
+}
+
+.brand-icon {
+  height: 40px;
+  width: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: linear-gradient(145deg, #6c36be, #1b102b);
+  box-shadow: 0 0 24px #8b50ee40;
+}
+
+.purple {
+  color: var(--purple);
+}
+
+.create-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+  background: linear-gradient(110deg, #8650df, #6232b5);
+  font-weight: 700;
+  margin-bottom: 28px;
+}
+
+.sidebar nav,
+.sidebar-bottom {
+  display: grid;
+  gap: 10px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 15px;
+  border-radius: 12px;
+  background: transparent;
+  color: #aaa8b4;
+  font-size: 14px;
+  text-align: left;
+  transition: .2s;
+}
+
+.nav-item:hover,
+.nav-item.active {
+  color: white;
+  background: #1b1625;
+}
+
+.nav-item.active svg {
+  color: var(--purple);
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+}
+
+.main {
+  margin-left: 245px;
+  min-height: 100vh;
+}
+
+.topbar {
+  height: 75px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0 5%;
+  border-bottom: 1px solid var(--border);
+}
+
+.top-actions {
+  display: flex;
+  gap: 22px;
+}
+
+.top-actions button,
+.icon-button {
+  background: transparent;
+  display: grid;
+  place-items: center;
+}
+
+.feed-layout {
+  max-width: 1160px;
+  margin: auto;
+  padding: 35px 5%;
+  display: grid;
+  grid-template-columns: minmax(0, 610px) 260px;
+  gap: 65px;
+}
+
+.stories {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  padding: 5px 0 25px;
+  border-bottom: 1px solid var(--border);
+}
+
+.story {
+  background: transparent;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  min-width: 64px;
+  font-size: 12px;
+  color: #c4c1cd;
+}
+
+.story-ring {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  padding: 3px;
+  background: linear-gradient(135deg, #bd78ff, #5e36d3, #f18bce);
+}
+
+.story-avatar {
+  width: 100%;
+  height: 100%;
+  border: 3px solid #111018;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 19px;
+  color: white;
+}
+
+.feed-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 28px 0 20px;
+}
+
+.feed-heading h2 {
+  font: 700 23px Manrope, sans-serif;
+  margin: 0 0 5px;
+}
+
+.feed-heading p,
+.right-panel p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.post {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 17px;
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+}
+
+.post-avatar,
+.suggestion-avatar {
+  height: 39px;
+  width: 39px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8752cf, #34204e);
+  font-weight: 800;
+}
+
+.post-user {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+}
+
+.post-user strong {
+  font-size: 13px;
+}
+
+.post-user span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.post-image {
+  width: 100%;
+  display: block;
+  aspect-ratio: 4 / 4.3;
+  object-fit: cover;
+  background: #1c1725;
+}
+
+.post-actions {
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 15px 8px;
+}
+
+.post-actions div {
+  display: flex;
+  gap: 17px;
+}
+
+.post-actions button {
+  padding: 0;
+  background: transparent;
+}
+
+.post-actions svg {
+  width: 22px;
+  height: 22px;
+}
+
+.post-caption {
+  padding: 0 15px 18px;
+  font-size: 13px;
+}
+
+.post-caption p {
+  line-height: 1.5;
+}
+
+.post-caption span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.right-panel {
+  padding-top: 160px;
+}
+
+.right-panel h3 {
+  font: 800 22px Manrope, sans-serif;
+  margin-bottom: 8px;
+}
+
+.suggestion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 23px;
+}
+
+.suggestion > div:nth-child(2) {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+  font-size: 12px;
+}
+
+.suggestion span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.suggestion button {
+  background: transparent;
+  color: var(--purple);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.nova-note {
+  margin-top: 40px;
+  padding: 20px;
+  display: grid;
+  gap: 10px;
+  border: 1px solid #55358b;
+  border-radius: 15px;
+  background: linear-gradient(140deg, #211433, #110f18);
+}
+
+.nova-note svg {
+  color: #bd8aff;
+}
+
+.nova-note span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.placeholder {
+  min-height: 75vh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  text-align: center;
+}
+
+.placeholder h1 {
+  font: 800 36px Manrope, sans-serif;
+  margin-bottom: 5px;
+}
+
+.placeholder p {
+  color: var(--muted);
+}
+
+.placeholder button {
+  background: #7946c5;
+  padding: 12px 22px;
+  border-radius: 10px;
+  margin-top: 12px;
+}
+
+.placeholder-icon {
+  color: #bb91ff;
+  padding: 20px;
+  border-radius: 18px;
+  background: #211433;
+}
+
+.mobile-brand,
+.mobile-nav {
+  display: none;
+}
+
+@media (max-width: 950px) {
+  .right-panel {
+    display: none;
+  }
+
+  .feed-layout {
+    display: block;
+    max-width: 650px;
+  }
+}
+
+@media (max-width: 650px) {
+  .sidebar {
+    display: none;
+  }
+
+  .main {
+    margin-left: 0;
+    padding-bottom: 75px;
+  }
+
+  .topbar {
+    height: 62px;
+    justify-content: space-between;
+    padding: 0 18px;
+  }
+
+  .mobile-brand {
+    display: block;
+    font: 800 23px Manrope, sans-serif;
+    letter-spacing: 2px;
+  }
+
+  .feed-layout {
+    padding: 20px 12px;
+  }
+
+  .stories {
+    gap: 14px;
+  }
+
+  .post {
+    border-radius: 12px;
+  }
+
+  .mobile-nav {
+    position: fixed;
+    bottom: 0;
+    inset-inline: 0;
+    height: 65px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: #100e16;
+    border-top: 1px solid var(--border);
+    z-index: 20;
+  }
+
+  .mobile-nav button {
+    background: transparent;
+    color: #aaa5b7;
+  }
+}
+
+
+.story-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #050408;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+}
+
+.story-viewer-content {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  height: min(92vh, 850px);
+  border-radius: 20px;
+  padding: 24px;
+  overflow: hidden;
+  background: linear-gradient(145deg, #38205c, #100d18 65%, #050408);
+  color: white;
+}
+
+.story-close {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  z-index: 2;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 36px;
+  cursor: pointer;
+}
+
+.story-viewer-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.story-viewer-message {
+  height: 75%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 23px;
+  font-weight: 700;
+}
+
+.story-navigation {
+  position: absolute;
+  inset: 50% 12px auto;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.story-navigation button {
+  pointer-events: auto;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.18);
+  color: white;
+  font-size: 30px;
+  cursor: pointer;
+}
+
+.story-media-preview {
+  width: 100%;
+  height: 68%;
+  object-fit: contain;
+  border-radius: 14px;
+  margin-top: 22px;
+  background: #050408;
+}
+
+.story-upload-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: fit-content;
+  margin: 16px auto;
+  padding: 13px 22px;
+  border-radius: 30px;
+  background: #7953c8;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.story-upload-button:hover {
+  background: #936be0;
+  transform: scale(1.03);
+}
+
+.camera-screen {
+  min-height: 85vh;
+  background: #09070f;
+  color: white;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.camera-top {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.camera-top button,
+.camera-controls button {
+  background: #21152f;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.camera-preview {
+  width: 100%;
+  max-width: 430px;
+  height: 65vh;
+  background: #17121f;
+  border-radius: 24px;
+  overflow: hidden;
+  position: relative;
+}
+
+.camera-preview video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera-controls {
+  width: 100%;
+  max-width: 430px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 25px 0;
+}
+
+.capture-button {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 6px solid white;
+  background: #7953c8;
+  cursor: pointer;
+  box-shadow: 0 0 20px #7953c899;
+}
+
+/* NOVA CAMERA UPGRADE */
+
+.camera-mode-switch {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.camera-mode-switch button,
+.camera-filters button {
+  background: #21152f;
+  color: #c9bddb;
+  border: 1px solid #39284e;
+  border-radius: 20px;
+  padding: 9px 17px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.camera-mode-switch button.selected,
+.camera-filters button.active-filter {
+  background: #7953c8;
+  color: white;
+  border-color: #a783ed;
+}
+
+.camera-filters {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 450px;
+  margin: 18px auto 0;
+}
+
+.camera-filters button {
+  font-size: 12px;
+  padding: 8px 13px;
+}
+
+.camera-preview {
+  position: relative;
+}
+
+.camera-preview video {
+  transition: filter 0.2s ease;
+}
+
+.recording-indicator {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  background: #160d20cc;
+  padding: 8px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.recording-indicator span {
+  width: 9px;
+  height: 9px;
+  background: #ff3159;
+  border-radius: 50%;
+  animation: nova-record-pulse 1s infinite;
+}
+
+.video-capture {
+  position: relative;
+}
+
+.video-capture.recording {
+  background: #ff3159;
+  border-radius: 18px;
+  transform: scale(0.8);
+  box-shadow: 0 0 22px #ff315988;
+}
+
+@keyframes nova-record-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+
+.auth-screen {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 15% 20%, rgba(155, 55, 255, .75), transparent 40%),
+    radial-gradient(ellipse at 85% 75%, rgba(105, 35, 230, .65), transparent 42%),
+    radial-gradient(ellipse at 50% 50%, #26083f 0%, #10051e 55%, #05020b 100%) !important;
+}
+
+.auth-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+
+  background-image:
+    radial-gradient(2px 2px at 8% 15%, #fff 99%, transparent),
+    radial-gradient(2px 2px at 22% 75%, #e8caff 99%, transparent),
+    radial-gradient(1px 1px at 38% 32%, #fff 99%, transparent),
+    radial-gradient(2px 2px at 58% 12%, #d9aaff 99%, transparent),
+    radial-gradient(2px 2px at 78% 65%, #fff 99%, transparent),
+    radial-gradient(1px 1px at 92% 28%, #e8caff 99%, transparent),
+    radial-gradient(2px 2px at 48% 88%, #fff 99%, transparent);
+
+  background-size: 320px 260px;
+  opacity: .9;
+}
+
+.auth-card {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(2px 2px at 15% 20%, white 70%, transparent),
+    radial-gradient(2px 2px at 75% 15%, #e6baff 70%, transparent),
+    radial-gradient(3px 3px at 85% 65%, white 70%, transparent),
+    radial-gradient(2px 2px at 30% 75%, #c084fc 70%, transparent),
+    radial-gradient(2px 2px at 55% 45%, white 70%, transparent);
+  background-size: 180px 180px;
+  opacity: .8;
+}
+
+.auth-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 480px;
+  padding: 42px 38px;
+  display: flex;
+  flex-direction: column;
+  gap: 19px;
+  background: rgba(17, 6, 35, .78);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(192, 132, 252, .4);
+  border-radius: 30px;
+  box-shadow:
+    0 0 45px rgba(139, 40, 255, .2),
+    0 0 100px rgba(139, 40, 255, .15);
+}
+
+.auth-card input {
+  width: 100%;
+  min-height: 58px;
+  padding: 16px 20px;
+  color: white;
+  background: rgba(14, 5, 30, .7);
+  border: 1px solid rgba(185, 110, 255, .55);
+  border-radius: 16px;
+  outline: none;
+  font-size: 15px;
+  box-sizing: border-box;
+}
+
+.auth-card input::placeholder {
+  color: #c5afd9;
+}
+
+.auth-card input:focus {
+  border-color: #c17aff;
+  box-shadow: 0 0 18px rgba(168, 85, 247, .35);
+}
+
+.auth-submit {
+  min-height: 62px;
+  border: none;
+  border-radius: 18px;
+  color: white;
+  font-size: 17px;
+  font-weight: 700;
+  background: linear-gradient(110deg, #a100ff, #7625e8, #9b36ff);
+  box-shadow: 0 0 28px rgba(160, 40, 255, .5);
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .auth-screen {
+    padding: 22px 14px;
+  }
+
+  .auth-card {
+    padding: 30px 22px;
+    border-radius: 25px;
+  }
+}
+
+
+.auth-logo {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #7953c8, #28133d);
+  border-radius: 17px;
+}
+
+.auth-card h1 {
+  margin: 0;
+  font-size: 38px;
+  letter-spacing: 3px;
+  color: white;
+}
+
+.auth-subtitle,
+.auth-footer {
+  color: #aaa1b8;
+  font-size: 14px;
+}
+
+.auth-switch {
+  display: flex;
+  gap: 8px;
+  padding: 5px;
+  background: #09090f;
+  border-radius: 12px;
+}
+
+.auth-switch button {
+  flex: 1;
+  padding: 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #aaa1b8;
+  cursor: pointer;
+}
+
+.auth-switch button.selected {
+  background: #7953c8;
+  color: white;
+}
+
+.auth-card input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 15px;
+  border: 1px solid #352b40;
+  border-radius: 11px;
+  background: #0c0b12;
+  color: white;
+  outline: none;
+}
+
+.auth-card input:focus {
+  border-color: #9569e8;
+}
+
+.auth-submit {
+  padding: 15px;
+  border: 0;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #7953c8, #5634a0);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-error {
+  color: #ff7895;
+  font-size: 13px;
+}
+
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: hidden;
+  position: relative;
+  background:
+    radial-gradient(ellipse at 15% 15%, #9b55e8 0%, transparent 35%),
+    radial-gradient(ellipse at 85% 80%, #5826a6 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 50%, #28113f 0%, #090611 85%);
+}
+
+.auth-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 20% 30%, white 70%, transparent),
+    radial-gradient(2px 2px at 70% 20%, #d9baff 70%, transparent),
+    radial-gradient(3px 3px at 85% 60%, white 70%, transparent),
+    radial-gradient(2px 2px at 35% 80%, #c084fc 70%, transparent);
+  background-size: 190px 190px;
+  opacity: .65;
+  pointer-events: none;
+}
+
+.auth-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 430px;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background: rgba(25, 13, 39, .78);
+  backdrop-filter: blur(22px);
+  border: 1px solid rgba(192, 132, 252, .35);
+  border-radius: 28px;
+  box-shadow: 0 0 70px rgba(130, 65, 210, .3);
+}
+
+
+
+/* =================================
+   NOVA — SHARED GALAXY EXPERIENCE
+   ================================= */
+
+:root {
+  --purple: #b56aff;
+  --muted: #c0afd2;
+  --panel: rgba(25, 12, 43, 0.76);
+  --border: rgba(190, 128, 255, 0.25);
+}
+
+html {
+  min-height: 100%;
+  background: #090312;
+}
+
+body {
+  min-height: 100vh;
+  color: #fff;
+  background:
+    radial-gradient(ellipse at 12% 15%, rgba(133, 40, 220, .65), transparent 38%),
+    radial-gradient(ellipse at 88% 78%, rgba(103, 31, 190, .55), transparent 40%),
+    radial-gradient(ellipse at 50% 45%, #291044 0%, #130820 48%, #08030f 100%);
+  background-attachment: fixed;
+}
+
+/* Galaxy stars shared by every screen */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(2px 2px at 12% 18%, #fff 70%, transparent),
+    radial-gradient(2px 2px at 28% 72%, #e8caff 70%, transparent),
+    radial-gradient(3px 3px at 76% 22%, #fff 70%, transparent),
+    radial-gradient(2px 2px at 88% 68%, #d6a5ff 70%, transparent),
+    radial-gradient(2px 2px at 54% 42%, #fff 70%, transparent),
+    radial-gradient(2px 2px at 42% 90%, #d6a5ff 70%, transparent);
+  background-size: 240px 240px;
+  opacity: .65;
+}
+
+/* Keep app content above the galaxy */
+#root {
+  position: relative;
+  min-height: 100vh;
+  isolation: isolate;
+}
+
+.app.nova-universe,
+.app.nova-universe .main {
+  background: transparent !important;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+/* Glass navigation */
+.sidebar {
+  background: rgba(14, 6, 27, .78);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border-right: 1px solid var(--border);
+}
+
+/* Feed cards */
+.post {
+  background: rgba(24, 11, 42, .78);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 35px rgba(0, 0, 0, .22);
+}
+
+.stories {
+  border-color: var(--border);
+}
+
+.story-avatar {
+  border-color: #170a28;
+}
+
+/* Feed header */
+.topbar {
+  background: rgba(14, 6, 27, .35);
+  backdrop-filter: blur(15px);
+  border-color: var(--border);
+}
+
+/* Right-side NOVA panel */
+.nova-note {
+  background: linear-gradient(
+    145deg,
+    rgba(114, 45, 174, .4),
+    rgba(24, 10, 42, .85)
+  );
+  border-color: rgba(190, 128, 255, .4);
+}
+
+/* Camera uses the same universe */
+.camera-screen {
+  background: transparent;
+}
+
+.camera-preview {
+  border: 1px solid rgba(190, 128, 255, .4);
+  box-shadow: 0 0 35px rgba(147, 63, 255, .2);
+}
+
+/* Story viewer uses the same galaxy */
+.story-viewer {
+  background:
+    radial-gradient(ellipse at 15% 15%, rgba(133, 40, 220, .65), transparent 38%),
+    radial-gradient(ellipse at 88% 78%, rgba(103, 31, 190, .55), transparent 40%),
+    #090312;
+}
+
+.story-viewer-content {
+  background: rgba(24, 10, 42, .88);
+  border: 1px solid var(--border);
+  box-shadow: 0 0 45px rgba(147, 63, 255, .22);
+}
+
+/* Mobile navigation */
+.mobile-nav {
+  background: rgba(15, 6, 29, .9);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border-color: var(--border);
+}
+
+/* Purple glow for interactive elements */
+.create-button,
+.auth-submit,
+.placeholder button {
+  background: linear-gradient(110deg, #a52cff, #7134d9, #bd65ff);
+  box-shadow: 0 0 24px rgba(164, 65, 255, .35);
+}
+
+/* NOVA GALAXY WELCOME BACKGROUND */
+.auth-screen {
+  background:
+    radial-gradient(ellipse at 15% 20%, rgba(170, 65, 255, 0.65), transparent 38%),
+    radial-gradient(ellipse at 85% 75%, rgba(105, 35, 220, 0.55), transparent 42%),
+    radial-gradient(ellipse at 50% 50%, #32104f 0%, #170923 55%, #07030e 100%) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(2px 2px at 10% 20%, white 99%, transparent),
+    radial-gradient(2px 2px at 30% 70%, #d9aaff 99%, transparent),
+    radial-gradient(1px 1px at 65% 25%, white 99%, transparent),
+    radial-gradient(2px 2px at 85% 45%, #d9aaff 99%, transparent),
+    radial-gradient(1px 1px at 45% 90%, white 99%, transparent);
+  background-size: 190px 190px;
+  opacity: 0.8;
+}
+
+.auth-card {
+  position: relative;
+  z-index: 1;
+  background: rgba(20, 9, 35, 0.72) !important;
+  border: 1px solid rgba(190, 125, 255, 0.4) !important;
+  box-shadow: 0 0 45px rgba(145, 55, 255, 0.25) !important;
+  backdrop-filter: blur(22px);
+}
+
+/* NOVA GALAXY BACKGROUND */
+html,
+body,
+#root {
+  min-height: 100%;
+  background: #08020f;
+}
+
+.app.nova-universe {
+  min-height: 100vh;
+  background:
+    linear-gradient(rgba(5, 0, 15, 0.18), rgba(5, 0, 15, 0.18)),
+    url("/images/nova-galaxy.png") center center / cover fixed !important;
+  color: white;
+}
+
+.app.nova-universe .main {
+  background: transparent !important;
+  position: relative;
+  min-height: 100vh;
+}
+
+.app.nova-universe .sidebar,
+.app.nova-universe .right-panel,
+.app.nova-universe .post {
+  background: rgba(12, 3, 27, 0.68) !important;
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(177, 91, 255, 0.45);
+  box-shadow: 0 0 22px rgba(139, 45, 255, 0.18);
+}
