@@ -863,6 +863,34 @@ return (
       </button>
     </div>
   </section>
+
+) : page === "Settings" ? (
+  <section className="settings-page">
+    <h1>Settings</h1>
+    <p>Manage your NOVA experience.</p>
+
+    <div className="settings-section">
+      <h3>Account</h3>
+      <p>Manage your profile and account preferences.</p>
+    </div>
+
+    <div className="settings-section">
+      <h3>Privacy & Security</h3>
+      <p>Manage your privacy and security preferences.</p>
+    </div>
+
+    <div className="settings-section">
+      <h3>Notifications</h3>
+      <p>Manage how NOVA keeps you updated.</p>
+    </div>
+
+    <button
+      className="logout-button"
+      onClick={handleLogout}
+    >
+      Log out
+    </button>
+  </section>
 ) : (
   <section className="placeholder">
     <div className="placeholder-icon"><Zap size={32} /></div>
@@ -871,6 +899,7 @@ return (
     <button onClick={() => setPage("Home")}>Back to Home</button>
   </section>
 )}
+
 </main>
 
       
@@ -980,24 +1009,9 @@ return (
         </div>
       )}
 
-<button
-  onClick={handleLogout}
-  style={{
-    position: "fixed",
-    bottom: 20,
-    right: 20,
-    zIndex: 9999,
-    padding: "12px 20px",
-    background: "#7953c8",
-    color: "white",
-    border: "none",
-    borderRadius: "12px",
-    cursor: "pointer"
-  }}
->
-  Log out
-</button>
-      
+    
+
+
     </div>
 
 
