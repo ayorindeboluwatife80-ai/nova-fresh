@@ -235,7 +235,7 @@ async function publishStory() {
     const filePath = `${crypto.randomUUID()}.${extension}`;
 
     const { error: uploadError } = await supabase.storage
-      .from("nova-stories")
+      .from("story-media")
       .upload(filePath, blob, {
         contentType: blob.type,
         upsert: false,
@@ -246,7 +246,8 @@ async function publishStory() {
     const { error: databaseError } = await supabase
       .from("stories")
       .insert({
-        media_path: filePath,
+  user_id: session.user.id,
+  media_path: filePath,
         media_type: blob.type.includes("video") ? "video" : "image",
         text_content: "",
         expires_at: new Date(
@@ -387,7 +388,7 @@ useEffect(() => {
         );
 
         console.log("NOVA STORAGE PATH:", storagePath);
-        
+
         const { data: signedImage, error: signedError } =
           await supabase.storage
             .from("story-media")
@@ -433,7 +434,7 @@ useEffect(() => {
       (data || []).map(async (story) => {
         const { data: fileData, error: fileError } =
           await supabase.storage
-            .from("nova-stories")
+            .from("story-media")
             .createSignedUrl(story.media_path, 3600);
 
         if (fileError) {
@@ -523,7 +524,7 @@ useEffect(() => {
   );
 }
 
-if (false && !session) {
+if (!session) {
   return (
     <div className="auth-screen">
       <form className="auth-card" onSubmit={handleAuth}>
