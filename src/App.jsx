@@ -26,7 +26,6 @@ const stories = [
   { name: "Zara", color: "#b28bd5" },
   { name: "Mila", color: "#8ba78b" },
 ];
-
 const posts = [
   {
     name: "amara.jpg",
@@ -43,6 +42,12 @@ const posts = [
     likes: "1,203",
   },
 ];
+function getPostImage(post) {
+  return post?.image_url || post?.image || post?.media_url || "";
+}
+  
+
+  
 
 function App() {
   const [page, setPage] = useState("Home");
@@ -363,10 +368,49 @@ useEffect(() => {
     if (error) {
       console.error("NOVA feed error:", error.message);
     } else {
-      setLivePosts(data || []);
-    }
+  const refreshedPosts = await Promise.all(
+    (data || []).map(async (post) => {
+      const originalImageUrl =
+        post.image_url || post.image || post.media_url;
 
-    setPostsLoading(false);
+      if (!originalImageUrl) return post;
+
+      try {
+        const parsedUrl = new URL(originalImageUrl);
+        const marker = "/object/sign/story-media/";
+        const markerIndex = parsedUrl.pathname.indexOf(marker);
+
+        if (markerIndex === -1) return post;
+
+        const storagePath = decodeURIComponent(
+          parsedUrl.pathname.slice(markerIndex + marker.length)
+        );
+
+        console.log("NOVA STORAGE PATH:", storagePath);
+        
+        const { data: signedImage, error: signedError } =
+          await supabase.storage
+            .from("story-media")
+            .createSignedUrl(storagePath, 3600);
+
+        if (signedError) {
+          console.error("NOVA image refresh error:", signedError.message);
+          return post;
+        }
+
+        return {
+          ...post,
+          image_url: signedImage.signedUrl,
+        };
+      } catch (imageError) {
+        console.error("NOVA image error:", imageError);
+        return post;
+      }
+    })
+  );
+
+  setLivePosts(refreshedPosts);
+}
   }
 
   loadPosts();
@@ -667,12 +711,16 @@ return (
                     <button className="icon-button"><MoreHorizontal /></button>
                   </div>
 
-                  <img
-                    className="post-image"
-                    src={`https://images.unsplash.com/${post.image}?auto=format&fit=crop&w=900&q=85`}
-                    alt="Social post"
-                  />
-
+                  
+{getPostImage(post) ? (
+  <img
+    className="post-image"
+    src={getPostImage(post)}
+    alt="Social post"
+  />
+) : (
+  <div className="post-image">Image unavailable</div>
+)}
                   <div className="post-actions">
                     <div>
                       <button onClick={() => setLiked(p => ({ ...p, [index]: !p[index] }))}>
