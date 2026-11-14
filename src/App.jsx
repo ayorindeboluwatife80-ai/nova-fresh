@@ -67,6 +67,97 @@ const [authError, setAuthError] = useState("");
   const [liked, setLiked] = useState({});
   const [saved, setSaved] = useState({});
 
+  const [activePost, setActivePost] = useState(null);
+const [comments, setComments] = useState([]);
+const [commentText, setCommentText] = useState("");
+const [commentsLoading, setCommentsLoading] = useState(false);
+
+async function openComments(post) {
+  setActivePost(post);
+  setComments([]);
+  setCommentText("");
+  setCommentsLoading(true);
+
+  const { data, error } = await supabase
+    .from("comments")
+    .select("*")
+    .eq("post_id", post.id)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Error loading comments:", error);
+    alert("Couldn't load comments. Please try again.");
+    } else {
+    const commentRows = data || [];
+    const profileIds = [
+      ...new Set(commentRows.map(comment => comment.profile_id))
+    ];
+
+    let profilesById = {};
+
+    if (profileIds.length > 0) {
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, username, display_name, avatar_url")
+        .in("id", profileIds);
+
+      if (profileError) {
+        console.error("Profile loading error:", profileError);
+      } else {
+        profilesById = Object.fromEntries(
+          (profileData || []).map(profile => [profile.id, profile])
+        );
+      }
+    }
+
+    setComments(
+      commentRows.map(comment => ({
+        ...comment,
+        profile: profilesById[comment.profile_id] || null
+      }))
+    );
+  }
+
+  setCommentsLoading(false);
+}
+
+async function addComment() {
+  if (!commentText.trim() || !activePost?.id) return;
+
+  const { data, error } = await supabase
+    .from("comments")
+    .insert({
+      post_id: activePost.id,
+      profile_id: session.user.id,
+      content: commentText.trim(),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error adding comment:", error);
+    alert("Couldn't post your comment. Please try again.");
+    return;
+  }
+
+  setComments((current) => [
+  ...current,
+  {
+    ...data,
+    profile: {
+      display_name: profile.name,
+      username: profile.username,
+      avatar_url: profile.avatar,
+    },
+  },
+]);
+  setCommentText("");
+}
+
+const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+const avatarFileRef = useRef(null);
+const postFileRef = useRef(null);
+
   const [profile, setProfile] = useState({
   name: "",
   username: "",
@@ -75,8 +166,9 @@ const [authError, setAuthError] = useState("");
 });
 
 
+
 useEffect(() => {
-  const updateUserProfile = (currentSession) => {
+  const updateUserProfile = async (currentSession) => {
     const user = currentSession?.user;
 
     if (!user) {
@@ -89,17 +181,25 @@ useEffect(() => {
       return;
     }
 
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, username, display_name, avatar_url, bio")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("NOVA profile loading error:", error);
+    }
+
     setProfile({
-      name: user.user_metadata?.display_name || "",
-      username: user.user_metadata?.username || "",
-      bio: "",
-      avatar: "",
+      name: data?.display_name || user.user_metadata?.display_name || "",
+      username: data?.username || user.user_metadata?.username || "",
+      bio: data?.bio || "",
+      avatar: data?.avatar_url || "",
     });
   };
 
   supabase.auth.getSession().then(({ data, error }) => {
-    console.log("NOVA SESSION:", data?.session);
-
     if (error) console.error(error);
 
     const currentSession = data?.session ?? null;
@@ -117,6 +217,7 @@ useEffect(() => {
 
   return () => subscription.unsubscribe();
 }, []);
+
 
 
   const [cameraMode, setCameraMode] = useState("photo");
@@ -193,6 +294,160 @@ async function handleLogout() {
 
   setPage("Home");
 }
+
+
+async function uploadAvatar(event) {
+  const file = event.target.files?.[0];
+
+  if (!file || !session?.user) return;
+
+  if (!file.type.startsWith("image/")) {
+    alert("Please choose an image.");
+    return;
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert("Please choose an image smaller than 5 MB.");
+    return;
+  }
+
+  try {
+    const filePath = `${session.user.id}/${crypto.randomUUID()}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("profile-avatars")
+      .upload(filePath, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: publicData } = supabase.storage
+      .from("profile-avatars")
+      .getPublicUrl(filePath);
+
+    const avatarUrl = publicData.publicUrl;
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .upsert({
+        id: session.user.id,
+        username: profile.username,
+        display_name: profile.name,
+        bio: profile.bio,
+        avatar_url: avatarUrl,
+      });
+
+    if (profileError) throw profileError;
+
+    setProfile(prev => ({
+      ...prev,
+      avatar: avatarUrl,
+    }));
+
+    alert("Your NOVA profile picture has been updated! 💜");
+  } catch (error) {
+    console.error("Avatar upload error:", error);
+    alert(`Couldn't upload your picture: ${error.message}`);
+  }
+
+  event.target.value = "";
+}
+
+async function uploadFeedPost(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    if (!session?.user?.id) {
+      alert("Please sign in before publishing.");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Please choose an image smaller than 10MB.");
+      return;
+    }
+
+    const caption = prompt("Write a caption for your post:") || "";
+    const extension = file.name.split(".").pop() || "jpg";
+    const path = `${session.user.id}/posts/${crypto.randomUUID()}.${extension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("story-media")
+      .upload(path, file, { contentType: file.type });
+
+    if (uploadError) throw uploadError;
+
+    const { data: signedData, error: urlError } = await supabase.storage
+      .from("story-media")
+      .createSignedUrl(path, 86400);
+
+    if (urlError) throw urlError;
+
+    const { data, error } = await supabase
+      .from("posts")
+      .insert({
+        user_id: session.user.id,
+        image_url: signedData.signedUrl,
+        caption,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    setLivePosts(current => [
+      {
+        ...data,
+        profile: {
+          display_name: profile.name,
+          username: profile.username,
+          avatar_url: profile.avatar,
+        },
+      },
+      ...current,
+    ]);
+
+    setPage("Home");
+    alert("Your post has been published! 💜");
+  } catch (error) {
+    console.error("Post upload failed:", error);
+    alert(error.message || "Couldn't publish your post.");
+  } finally {
+    event.target.value = "";
+  }
+}
+
+async function saveProfile() {
+  if (!session?.user) {
+    alert("Please log in first.");
+    return;
+  }
+
+  const updatedProfile = {
+    id: session.user.id,
+    username: profile.username.trim().replace("@", ""),
+    display_name: profile.name.trim(),
+    bio: profile.bio.trim(),
+    avatar_url: profile.avatar || null,
+  };
+
+  const { error } = await supabase
+    .from("profiles")
+    .upsert(updatedProfile);
+
+  if (error) {
+    console.error("Profile saving error:", error);
+    alert(`Couldn't save your profile: ${error.message}`);
+    return false;
+  }
+
+  alert("Your NOVA profile has been saved! 💜");
+  return true;
+}
+
 
 function capturePhoto() {
   const video = videoRef.current;
@@ -410,7 +665,35 @@ useEffect(() => {
     })
   );
 
-  setLivePosts(refreshedPosts);
+  
+const userIds = [
+  ...new Set(refreshedPosts.map(post => post.user_id).filter(Boolean))
+];
+
+let profilesById = {};
+
+if (userIds.length > 0) {
+  const { data: profileData, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, username, display_name, avatar_url")
+    .in("id", userIds);
+
+  if (profileError) {
+    console.error("NOVA post profiles error:", profileError);
+  } else {
+    profilesById = Object.fromEntries(
+      (profileData || []).map(item => [item.id, item])
+    );
+  }
+}
+
+setLivePosts(
+  refreshedPosts.map(post => ({
+    ...post,
+    profile: profilesById[post.user_id] || null,
+  }))
+);
+
 }
   }
 
@@ -430,30 +713,55 @@ useEffect(() => {
       return;
     }
 
-    const storiesWithUrls = await Promise.all(
-      (data || []).map(async (story) => {
-        const { data: fileData, error: fileError } =
-          await supabase.storage
-            .from("story-media")
-            .createSignedUrl(story.media_path, 3600);
 
-        if (fileError) {
-          console.error("Story media error:", fileError.message);
-          return null;
-        }
+const userIds = [
+  ...new Set((data || []).map(story => story.user_id))
+];
 
-        return {
-          id: story.id,
-          name: "NOVA user",
-          color: "#7953c8",
-          own: false,
-          media: {
-            url: fileData.signedUrl,
-            type: story.media_type,
-          },
-        };
-      })
+let profilesById = {};
+
+if (userIds.length > 0) {
+  const { data: profileData, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, username, display_name, avatar_url")
+    .in("id", userIds);
+
+  if (profileError) {
+    console.error("NOVA story profiles error:", profileError);
+  } else {
+    profilesById = Object.fromEntries(
+      (profileData || []).map(item => [item.id, item])
     );
+  }
+}
+
+const storiesWithUrls = await Promise.all(
+  (data || []).map(async (story) => {
+    const { data: fileData, error: fileError } = await supabase.storage
+      .from("story-media")
+      .createSignedUrl(story.media_path, 3600);
+
+    if (fileError) {
+      console.error("Story media error:", fileError.message);
+      return null;
+    }
+
+    const owner = profilesById[story.user_id];
+
+    return {
+      id: story.id,
+      name: owner?.display_name || owner?.username || "NOVA user",
+      color: "#7953c8",
+      avatar: owner?.avatar_url || "",
+      own: story.user_id === session?.user?.id,
+      media: {
+        url: fileData.signedUrl,
+        type: story.media_type,
+      },
+    };
+  })
+);
+
 
     setLiveStories(storiesWithUrls.filter(Boolean));
   }
@@ -676,15 +984,19 @@ return (
 }}
 >
                     <div className="story-ring">
-                      <div className="story-avatar" style={{ background: story.color }}>
-                        {story.media ? (
-  story.media.type.startsWith("video/") ? "▶" : "✦"
-) : story.own ? (
-  <Plus size={24} />
-) : (
-  story.name[0]
-)}
-                      </div>
+                      
+<div className="story-avatar" style={{ background: story.color }}>
+  {story.avatar ? (
+    <img src={story.avatar} alt={story.name} />
+  ) : story.media ? (
+    story.media.type.startsWith("video/") ? "▶" : "✦"
+  ) : story.own ? (
+    <Plus size={24} />
+  ) : (
+    story.name[0]
+  )}
+</div>
+
                     </div>
                     <span>{story.name}</span>
                   </button>
@@ -702,11 +1014,22 @@ return (
               {(livePosts.length ? livePosts : posts).map((post, index) => (
                 <article className="post" key={post.name}>
                   <div className="post-header">
-                    <div className="post-avatar">
-  {(post.name || post.username || "N")[0].toUpperCase()}
+                    
+<div className="post-avatar">
+  {post.profile?.avatar_url ? (
+    <img
+      src={post.profile.avatar_url}
+      alt="Profile"
+    />
+  ) : (
+    (post.profile?.display_name || post.name || post.username || "N")[0].toUpperCase()
+  )}
 </div>
+
                     <div className="post-user">
-                     <strong>{post.name || post.username || "NOVA user"}</strong>
+                     <strong>
+  {post.profile?.display_name || post.profile?.username || post.name || post.username || "NOVA user"}
+</strong>
 <span>{post.location || "NOVA"}</span>
                     </div>
                     <button className="icon-button"><MoreHorizontal /></button>
@@ -727,7 +1050,9 @@ return (
                       <button onClick={() => setLiked(p => ({ ...p, [index]: !p[index] }))}>
                         <Heart color={liked[index] ? "#ed4777" : "currentColor"} fill={liked[index] ? "#ed4777" : "none"} />
                       </button>
-                      <button><MessageCircle /></button>
+                      <button onClick={() => openComments(post)}>
+  <MessageCircle />
+</button>
                       <button><Send /></button>
                     </div>
                     <button onClick={() => setSaved(p => ({ ...p, [index]: !p[index] }))}>
@@ -738,7 +1063,9 @@ return (
                   <div className="post-caption">
                     <strong>{liked[index] ? "2,482" : post.likes} likes</strong>
                     <p><b>{post.name}</b> {post.caption}</p>
-                    <span>View all comments</span>
+                    <span onClick={() => openComments(post)} style={{ cursor: "pointer" }}>
+  View all comments
+</span>
                   </div>
                 </article>
               ))}
@@ -852,11 +1179,69 @@ return (
 ) : page === "Profile" ? (
   <section className="profile-page">
     <div className="profile-header">
-      <div className="profile-avatar">
-        {profile.name
-          ? profile.name[0].toUpperCase()
-          : "N"}
-      </div>
+      
+<div className="profile-avatar avatar-upload">
+  {profile.avatar ? (
+    <img src={profile.avatar} alt="Profile picture" />
+  ) : (
+    profile.name ? profile.name[0].toUpperCase() : "N"
+  )}
+
+  <button
+    className="nova-avatar-badge"
+    onClick={() => setAvatarMenuOpen(prev => !prev)}
+    aria-label="Open profile actions"
+  >
+    <Zap size={16} fill="white" />
+  </button>
+
+  {avatarMenuOpen && (
+    <div className="nova-avatar-menu">
+      <button onClick={() => {
+        setAvatarMenuOpen(false);
+        avatarFileRef.current?.click();
+      }}>
+        <UserRound size={17} /> Change picture
+      </button>
+
+      <button onClick={() => {
+        setAvatarMenuOpen(false);
+        setStoryMedia(null);
+        setActiveStory({
+          name: "Your story",
+          color: "#7953c8",
+          own: true,
+        });
+      }}>
+        <Plus size={17} /> Add to Story
+      </button>
+
+      <button onClick={() => {
+        setAvatarMenuOpen(false);
+        postFileRef.current?.click();
+      }}>
+        <Camera size={17} /> Create a post
+      </button>
+    </div>
+  )}
+
+  <input
+    ref={avatarFileRef}
+    type="file"
+    accept="image/*"
+    hidden
+    onChange={uploadAvatar}
+  />
+
+
+<input
+  ref={postFileRef}
+  type="file"
+  accept="image/*"
+  hidden
+  onChange={uploadFeedPost}
+/>
+</div>
 
       <div className="profile-details">
         <h1>{profile.name || "Your Name"}</h1>
@@ -869,31 +1254,52 @@ return (
           <span><strong>0</strong> following</span>
         </div>
 
-        <button
-          className="edit-profile-button"
-          onClick={() => {
-            const name = window.prompt("Your display name:", profile.name);
-            if (name === null) return;
+        
+<button
+  className="edit-profile-button"
+  onClick={async () => {
+    const name = window.prompt("Your display name:", profile.name);
+    if (name === null) return;
 
-            const username = window.prompt(
-              "Your username:",
-              profile.username
-            );
-            if (username === null) return;
+    const username = window.prompt(
+      "Your username:",
+      profile.username
+    );
+    if (username === null) return;
 
-            const bio = window.prompt("Your bio:", profile.bio);
-            if (bio === null) return;
+    const bio = window.prompt("Your bio:", profile.bio);
+    if (bio === null) return;
 
-            setProfile(prev => ({
-              ...prev,
-              name,
-              username: username.replace("@", "").trim(),
-              bio,
-            }));
-          }}
-        >
-          Edit Profile
-        </button>
+    const updatedProfile = {
+      ...profile,
+      name: name.trim(),
+      username: username.replace("@", "").trim(),
+      bio: bio.trim(),
+    };
+
+    const { error } = await supabase
+      .from("profiles")
+      .upsert({
+        id: session.user.id,
+        username: updatedProfile.username,
+        display_name: updatedProfile.name,
+        bio: updatedProfile.bio,
+        avatar_url: profile.avatar || null,
+      });
+
+    if (error) {
+      console.error("Profile saving error:", error);
+      alert(`Couldn't save your profile: ${error.message}`);
+      return;
+    }
+
+    setProfile(updatedProfile);
+    alert("Your NOVA profile has been saved! 💜");
+  }}
+>
+  Edit Profile
+</button>
+
       </div>
     </div>
 
@@ -960,6 +1366,84 @@ return (
         ))}
         <button onClick={() => setPage("Camera")}><Camera size={23} /></button>
       </div>
+
+      {activePost && (
+        <div className="comments-overlay">
+          <div className="comments-window">
+            <div className="comments-header">
+              <h2>Comments</h2>
+              <button onClick={() => setActivePost(null)}>×</button>
+            </div>
+
+           
+<div className="comments-list">
+  {commentsLoading ? (
+    <p>Loading comments...</p>
+  ) : comments.length === 0 ? (
+    <p>No comments yet. Be the first! 💜</p>
+  ) : (
+    comments.map((comment) => (
+      <div className="comment-item" key={comment.id}>
+        <div className="comment-avatar">
+          {comment.profile?.avatar_url ? (
+            <img src={comment.profile.avatar_url} alt="" />
+          ) : (
+            (comment.profile?.display_name || comment.profile?.username || "N")[0].toUpperCase()
+          )}
+        </div>
+
+        <div className="comment-content">
+          <strong>
+            {comment.profile?.display_name || comment.profile?.username || "NOVA user"}
+          </strong>
+          <p>{comment.content}</p>
+        </div>
+      </div>
+    ))
+  )}
+</div>
+
+<form
+  className="comment-form"
+  onSubmit={(e) => {
+    e.preventDefault();
+    addComment();
+  }}
+>
+  <input
+    type="text"
+    placeholder="Add a comment..."
+    value={commentText}
+    onChange={(e) => setCommentText(e.target.value)}
+  />
+  <button type="submit" disabled={!commentText.trim()}>
+    Post
+  </button>
+</form>
+
+            
+
+            <form
+              className="comment-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                addComment();
+              }}
+            >
+              <input
+                type="text"
+                placeholder="Add a comment..."
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+              />
+              <button type="submit" disabled={!commentText.trim()}>
+                Post
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {activeStory && (
         <div className="story-viewer">
           <div className="story-viewer-content">
