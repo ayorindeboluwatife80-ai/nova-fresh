@@ -241,6 +241,17 @@ const filters = [
 const selectedFilter =
   filters.find(filter => filter.value === activeFilter) || filters[0];
   const [livePosts, setLivePosts] = useState([]);
+  const [flicks, setFlicks] = useState([]);
+  const [flickLiked, setFlickLiked] = useState({});
+  const [flickLikeCounts, setFlickLikeCounts] = useState({});
+
+  const [activeFlick, setActiveFlick] = useState(null);
+const [flickComments, setFlickComments] = useState([]);
+const [flickCommentText, setFlickCommentText] = useState("");
+const [flickCommentsLoading, setFlickCommentsLoading] = useState(false);
+const [flicksLoading, setFlicksLoading] = useState(false);
+const flicksFileRef = useRef(null);
+const flicksFeedRef = useRef(null);
 const [postsLoading, setPostsLoading] = useState(true);
 
 const videoRef = useRef(null);
@@ -419,6 +430,247 @@ async function uploadFeedPost(event) {
     event.target.value = "";
   }
 }
+
+async function toggleFlickLike(flick) {
+    if (flick.featured) {
+    setFlickLiked(current => ({
+      ...current,
+      [flick.id]: !current[flick.id],
+    }));
+
+    setFlickLikeCounts(current => ({
+      ...current,
+      [flick.id]: Math.max(
+        0,
+        (current[flick.id] || 0) + (current[flick.id] ? -1 : 1)
+      ),
+    }));
+
+    return;
+  }
+  if (!session?.user?.id) {
+    alert("Please log in to like FLICKS.");
+    return;
+  }
+
+  const alreadyLiked = !!flickLiked[flick.id];
+
+  // Update the screen immediately
+  setFlickLiked(current => ({
+    ...current,
+    [flick.id]: !alreadyLiked,
+  }));
+
+  setFlickLikeCounts(current => ({
+    ...current,
+    [flick.id]: Math.max(
+      0,
+      (current[flick.id] || 0) + (alreadyLiked ? -1 : 1)
+    ),
+  }));
+
+  const request = alreadyLiked
+    ? supabase
+        .from("flick_likes")
+        .delete()
+        .eq("flick_id", flick.id)
+        .eq("profile_id", session.user.id)
+    : supabase
+        .from("flick_likes")
+        .insert({
+          flick_id: flick.id,
+          profile_id: session.user.id,
+        });
+
+  const { error } = await request;
+
+  if (error) {
+    // Restore the previous state if saving fails
+    setFlickLiked(current => ({
+      ...current,
+      [flick.id]: alreadyLiked,
+    }));
+
+    setFlickLikeCounts(current => ({
+      ...current,
+      [flick.id]: Math.max(
+        0,
+        (current[flick.id] || 0) + (alreadyLiked ? 1 : -1)
+      ),
+    }));
+
+    console.error("FLICK like error:", error.message);
+    alert("Couldn't update your like. Please try again.");
+  }
+}
+
+async function openFlickComments(flick) {
+  if (flick.featured) {
+  setActiveFlick(flick);
+  setFlickComments([]);
+  setFlickCommentText("");
+  setFlickCommentsLoading(false);
+  return;
+}
+  setActiveFlick(flick);
+  setFlickComments([]);
+  setFlickCommentText("");
+  setFlickCommentsLoading(true);
+
+  try {
+    const { data, error } = await supabase
+      .from("flick_comments")
+      .select("*")
+      .eq("flick_id", flick.id)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    const userIds = [...new Set((data || []).map(comment => comment.profile_id))];
+
+    let profilesById = {};
+
+    if (userIds.length > 0) {
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, username, display_name, avatar_url")
+        .in("id", userIds);
+
+      if (profilesError) throw profilesError;
+
+      profilesById = Object.fromEntries(
+        (profilesData || []).map(profile => [profile.id, profile])
+      );
+    }
+
+    setFlickComments(
+      (data || []).map(comment => ({
+        ...comment,
+        profile: profilesById[comment.profile_id] || null,
+      }))
+    );
+  } catch (error) {
+    console.error("FLICK comments error:", error.message);
+    alert("Couldn't load comments. Please try again.");
+  } finally {
+    setFlickCommentsLoading(false);
+  }
+}
+
+async function addFlickComment(event) {
+  event.preventDefault();
+
+  if (!session?.user?.id) {
+    alert("Please log in to comment.");
+    return;
+  }
+
+  if (!flickCommentText.trim() || !activeFlick) return;
+
+  const content = flickCommentText.trim();
+
+  const { data, error } = await supabase
+    .from("flick_comments")
+    .insert({
+      flick_id: activeFlick.id,
+      profile_id: session.user.id,
+      content,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("FLICK comment error:", error.message);
+    alert("Couldn't send your comment.");
+    return;
+  }
+
+  setFlickComments(current => [
+    ...current,
+    {
+      ...data,
+      profile: {
+        display_name: profile.name,
+        username: profile.username,
+        avatar_url: profile.avatar,
+      },
+    },
+  ]);
+
+  setFlickCommentText("");
+}
+
+async function uploadFlick(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    if (!session?.user?.id) {
+      alert("Please sign in before publishing.");
+      return;
+    }
+
+    if (!file.type.startsWith("video/")) {
+      alert("Please choose a video.");
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+      alert("Please choose a video smaller than 50MB.");
+      return;
+    }
+
+    const caption = prompt("Write a caption for your FLICK:") || "";
+    const extension = file.name.split(".").pop() || "mp4";
+    const path = `${session.user.id}/flicks/${crypto.randomUUID()}.${extension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("story-media")
+      .upload(path, file, { contentType: file.type });
+
+    if (uploadError) throw uploadError;
+
+    const { data: signedData, error: urlError } = await supabase.storage
+      .from("story-media")
+      .createSignedUrl(path, 86400);
+
+    if (urlError) throw urlError;
+
+    const { data, error } = await supabase
+      .from("flicks")
+      .insert({
+        user_id: session.user.id,
+        video_path: path,
+        caption,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    setFlicks(current => [
+      {
+        ...data,
+        video_url: signedData.signedUrl,
+        profile: {
+          display_name: profile.name,
+          username: profile.username,
+          avatar_url: profile.avatar,
+        },
+      },
+      ...current,
+    ]);
+
+    setPage("Reels");
+    alert("Your FLICK has been published! 💜");
+  } catch (error) {
+    console.error("FLICK upload failed:", error);
+    alert(error.message || "Couldn't publish your FLICK.");
+  } finally {
+    event.target.value = "";
+  }
+}
+
 
 async function saveProfile() {
   if (!session?.user) {
@@ -700,6 +952,124 @@ setLivePosts(
   loadPosts();
 }, []);
 
+
+useEffect(() => {
+  async function loadFlicks() {
+    setFlicksLoading(true);
+
+    try {
+      const { data, error } = await supabase
+        .from("flicks")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+// Load likes for all FLICKS
+const { data: likesData, error: likesError } = await supabase
+  .from("flick_likes")
+  .select("flick_id, profile_id");
+
+if (likesError) throw likesError;
+
+const currentUserId = session?.user?.id;
+
+const likeCounts = {};
+const likedByMe = {};
+
+(likesData || []).forEach(like => {
+  likeCounts[like.flick_id] = (likeCounts[like.flick_id] || 0) + 1;
+
+  if (like.profile_id === currentUserId) {
+    likedByMe[like.flick_id] = true;
+  }
+});
+
+setFlickLikeCounts(likeCounts);
+setFlickLiked(likedByMe);
+
+const userIds = [
+        ...new Set((data || []).map(flick => flick.user_id))
+      ];
+
+      let profilesById = {};
+
+      if (userIds.length > 0) {
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("id, username, display_name, avatar_url")
+          .in("id", userIds);
+
+        if (profileError) throw profileError;
+
+        profilesById = Object.fromEntries(
+          (profileData || []).map(item => [item.id, item])
+        );
+      }
+
+      const flicksWithUrls = await Promise.all(
+        (data || []).map(async flick => {
+          const { data: fileData, error: fileError } =
+            await supabase.storage
+              .from("story-media")
+              .createSignedUrl(flick.video_path, 3600);
+
+          if (fileError) {
+            console.error("FLICKS video error:", fileError.message);
+            return null;
+          }
+
+          return {
+  ...flick,
+  video_url: fileData.signedUrl,
+  profile: profilesById[flick.user_id] || null,
+  likes_count: likeCounts[flick.id] || 0,
+  liked_by_me: !!likedByMe[flick.id],
+};
+        })
+      );
+
+      setFlicks(flicksWithUrls.filter(Boolean));
+    } catch (error) {
+      console.error("NOVA FLICKS error:", error.message);
+    } finally {
+      setFlicksLoading(false);
+    }
+  }
+
+  loadFlicks();
+}, []);
+
+
+useEffect(() => {
+  if (page !== "Reels") return;
+
+  const container = flicksFeedRef.current;
+  if (!container) return;
+
+  const videos = container.querySelectorAll("video");
+
+  const observer = new IntersectionObserver(
+    entries => {
+      entries.forEach(entry => {
+        const video = entry.target;
+
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.65) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      });
+    },
+    { threshold: [0, 0.65, 1] }
+  );
+
+  videos.forEach(video => observer.observe(video));
+
+  return () => observer.disconnect();
+}, [page, flicks]);
+
+
 useEffect(() => {
   async function loadStories() {
     const { data, error } = await supabase
@@ -813,13 +1183,13 @@ useEffect(() => {
   };
 }, [page, cameraFacing]);
 
-  const navigation = [
-    { name: "Home", icon: Home },
-    { name: "Explore", icon: Compass },
-    { name: "Reels", icon: Clapperboard },
-    { name: "Messages", icon: MessageCircle },
-    { name: "Profile", icon: UserRound },
-  ];
+ const navigation = [
+  { name: "Home", label: "Home", icon: Home },
+  { name: "Explore", label: "ORBIT", icon: Compass },
+  { name: "Reels", label: "FLICKS", icon: Clapperboard },
+  { name: "Messages", label: "PULSE", icon: MessageCircle },
+  { name: "Profile", label: "Profile", icon: UserRound },
+];
 
   if (authLoading) {
   return (
@@ -830,7 +1200,7 @@ useEffect(() => {
       </div>
     </div>
   );
-}
+}111
 
 if (!session) {
   return (
@@ -926,12 +1296,15 @@ return (
           <span>NOVA<span className="purple">.</span></span>
         </div>
 
-        <button className="create-button" onClick={() => setPage("Create")}>
-          <Plus size={19} /> Create
-        </button>
+        <button
+  className="create-button"
+  onClick={() => postFileRef.current?.click()}
+>
+  <Zap size={19} /> SPARK
+</button>
 
         <nav>
-          {navigation.map(({ name, icon: Icon }) => (
+          {navigation.map(({ name, label, icon: Icon }) => ( 
             <button
               key={name}
               className={`nav-item ${page === name ? "active" : ""}`}
@@ -941,7 +1314,7 @@ return (
 }}
             >
               <Icon size={21} />
-              <span>{name}</span>
+              <span>{label}</span>
             </button>
           ))}
         </nav>
@@ -1091,7 +1464,188 @@ return (
               </div>
             </aside>
           </div>
-                  ) : page === "Camera" ? (
+
+) : page === "Explore" ? (
+  <section className="explore-page">
+    <div className="explore-header">
+      <h2>ORBIT</h2>
+      <p>Explore the universe of NOVA.</p>
+    </div>
+
+    <div className="explore-grid">
+      {(livePosts.length ? livePosts : posts).map((post, index) => (
+        <button
+          className="explore-post"
+          key={post.id || index}
+          onClick={() => setActivePost(post)}
+        >
+          {getPostImage(post) ? (
+            <img src={getPostImage(post)} alt="NOVA post" />
+          ) : (
+            <span>{post.caption}</span>
+          )}
+        </button>
+      ))}
+    </div>
+  </section>
+
+                     
+) : page === "Reels" ? (
+  <section className="flicks-page">
+    <div className="flicks-header">
+      <h2>FLICKS</h2>
+      <button onClick={() => flicksFileRef.current?.click()}>
+        <Plus size={20} /> Upload
+      </button>
+    </div>
+
+    <input
+      ref={flicksFileRef}
+      type="file"
+      accept="video/*"
+      hidden
+      onChange={uploadFlick}
+    />
+
+    <div className="flicks-feed" ref={flicksFeedRef}>
+      {[
+        {
+          id: "featured-1",
+          video_url: "/flicks/featured1.mp4",
+          caption: "Welcome to NOVA. ✨",
+          featured: true,
+        },
+        {
+          id: "featured-2",
+          video_url: "/flicks/featured2.mp4",
+          caption: "Discover something new. 💜",
+          featured: true,
+        },
+        {
+          id: "featured-3",
+          video_url: "/flicks/featured3.mp4",
+          caption: "Your world. Your moments. Your NOVA.",
+          featured: true,
+        },
+        ...flicks.map(flick => ({
+          ...flick,
+          featured: false,
+        })),
+      ].map(flick => (
+        <article className="flick-card" key={flick.id}>
+          <video
+            src={flick.video_url}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+          />
+
+          <div className="flick-overlay">
+  {flick.featured && <span>FEATURED ON NOVA</span>}
+
+  <p>{flick.caption}</p>
+</div>
+
+<div className="flick-actions">
+  <button
+    className={flickLiked[flick.id] ? "liked" : ""}
+    onClick={() => toggleFlickLike(flick)}
+    aria-label="Like FLICK"
+  >
+    <Heart
+      size={28}
+      fill={flickLiked[flick.id] ? "currentColor" : "none"}
+    />
+    <span>{flickLikeCounts[flick.id] || 0}</span>
+  </button>
+
+  <button
+  onClick={() => openFlickComments(flick)}
+  aria-label="Comments"
+>
+  <MessageCircle size={28} />
+  <span>
+    {flick.id === activeFlick?.id ? flickComments.length : "Comment"}
+  </span>
+</button>
+
+  <button
+    onClick={() => alert("FLICK saving coming next!")}
+    aria-label="Save FLICK"
+  >
+    <Bookmark size={27} />
+    <span>Save</span>
+  </button>
+
+  <button
+    onClick={() => {
+      if (navigator.share) {
+        navigator.share({
+          title: "NOVA FLICK",
+          text: flick.caption,
+          url: window.location.href,
+        }).catch(() => {});
+      } else {
+        navigator.clipboard.writeText(window.location.href);
+        alert("Link copied!");
+      }
+    }}
+    aria-label="Share FLICK"
+  >
+    <Send size={27} />
+    <span>Share</span>
+  </button>
+</div>
+        </article>
+      ))}
+    </div>
+    {activeFlick && (
+  <div className="flick-comments-backdrop" onClick={() => setActiveFlick(null)}>
+    <div
+      className="flick-comments-panel"
+      onClick={event => event.stopPropagation()}
+    >
+      <div className="flick-comments-header">
+        <h3>Comments</h3>
+        <button onClick={() => setActiveFlick(null)}>✕</button>
+      </div>
+
+      <div className="flick-comments-list">
+        {flickCommentsLoading ? (
+          <p>Loading comments...</p>
+        ) : flickComments.length === 0 ? (
+          <p className="empty-flick-comments">
+            No comments yet. Start the conversation 💜
+          </p>
+        ) : (
+          flickComments.map(comment => (
+            <div className="flick-comment" key={comment.id}>
+              <strong>
+                {comment.profile?.display_name ||
+                  comment.profile?.username ||
+                  "NOVA user"}
+              </strong>
+              <p>{comment.content}</p>
+            </div>
+          ))
+        )}
+      </div>
+
+      <form className="flick-comment-form" onSubmit={addFlickComment}>       <input
+          value={flickCommentText}
+          onChange={event => setFlickCommentText(event.target.value)}
+          placeholder="Add a comment..."
+        />
+        <button type="submit">Send</button>
+      </form>
+    </div>
+  </div>
+)}
+  </section>
+) : page === "Camera" ? (
+          
           <section className="camera-screen">
             <div className="camera-top">
               <button onClick={() => setPage("Home")}>✕</button>
@@ -1359,9 +1913,10 @@ return (
 
       
       <div className="mobile-nav">
-        {navigation.map(({ name, icon: Icon }) => (
+       {navigation.map(({ name, label, icon: Icon }) => (
           <button key={name} onClick={() => setPage(name)}>
             <Icon size={22} />
+            <span>{label}</span>
           </button>
         ))}
         <button onClick={() => setPage("Camera")}><Camera size={23} /></button>
